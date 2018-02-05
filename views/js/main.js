@@ -495,18 +495,32 @@ function logAverageFrame(times) {   // times is the array of User Timing measure
 
 // The following code for sliding background pizzas was pulled from Ilya's demo found at:
 // https://www.igvita.com/slides/2012/devtools-tips-and-tricks/jank-demo.html
-
+// implemented requestAnimationFrame as seen on http://www.html5rocks.com/en/tutorials/speed/animations/
+// declare variable for known scroll position
+var latestKnownScrollY = 0,
+ticking = false;
+// Callback for scroll event
+function onScroll() {
+  latestKnownScrollY = window.scrollY;
+  requestTick();
+}
+// calls requestAnimationFrame
+function requestTick() {
+  if(!ticking) {
+    window.requestAnimationFrame(updatePositions);
+  }
+  ticking = true;
+}
 // Moves the sliding background pizzas based on scroll position
 function updatePositions() {
   frame++;
   window.performance.mark("mark_start_frame");
-
-  var items = document.querySelectorAll('.mover');
-  for (var i = 0; i < items.length; i++) {
-    // document.body.scrollTop is no longer supported in Chrome.
-    var scrollTop = document.documentElement.scrollTop || document.body.scrollTop;
-    var phase = Math.sin((scrollTop / 1250) + (i % 5));
-    items[i].style.left = items[i].basicLeft + 100 * phase + 'px';
+//creat var yZ to remove one computation out of for loop
+    var yZ = latestKnownScrollY / 1250;
+    for (var i = 0; i < items.length; i++) {
+    var phase = Math.sin(yZ + (i % 5));
+    window.items[i].style.transform = 'translateX(' + (100*phase) + 'px)';
+  
   }
 
   // User Timing API to the rescue again. Seriously, it's worth learning.
@@ -520,21 +534,26 @@ function updatePositions() {
 }
 
 // runs updatePositions on scroll
-window.addEventListener('scroll', updatePositions);
-
+window.addEventListener('scroll', onScroll, false);
+// removed document.querySelector("#movingPizzas1") from the event listener function and into its own variable
+mPizzas = document.querySelector("#movingPizzas1");
 // Generates the sliding pizzas when the page loads.
 document.addEventListener('DOMContentLoaded', function() {
   var cols = 8;
   var s = 256;
-  for (var i = 0; i < 200; i++) {
+  for (var i = 0; i < 100; i++) {
     var elem = document.createElement('img');
     elem.className = 'mover';
     elem.src = "images/pizza.png";
     elem.style.height = "100px";
     elem.style.width = "73.333px";
-    elem.basicLeft = (i % cols) * s;
+    // setting the intial position of the pizzas with elem.style.left
+    elem.style.left = (i % cols) * s + 'px';
     elem.style.top = (Math.floor(i / cols) * s) + 'px';
-    document.querySelector("#movingPizzas1").appendChild(elem);
+    mPizzas.appendChild(elem);
   }
-  updatePositions();
+  // moved the items variable declaration down here to make it available globally
+  window.items = document.querySelectorAll('.mover');
+  window.requestAnimationFrame(updatePositions);
+  
 });
